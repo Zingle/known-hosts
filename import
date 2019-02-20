@@ -1,0 +1,89 @@
+#!/bin/bash -e
+
+showhelp () {
+    echo "Usage:"
+    echo "  import [-g]"
+    echo "  import [-g] {--public|--domain|<domain>}"
+    echo "  import --help"
+    echo
+    echo "Import host keys into local system."
+    echo
+    echo "OPTIONS"
+    echo
+    echo "  --help      Show this help."
+    echo "  -g          Import host keys for all users (global)."
+    echo "  --public    Import public hosts (default unless -g specified)."
+    echo "  --domain    Import hosts for local domain (default if -g specified)."
+    echo "  <domain>    Specify domain (e.g., 'zingle.local')."
+}
+
+declare global=
+declare domain=
+declare file=
+declare tmpdir=$(mktemp -d)
+declare pkg=https://github.com/Zingle/known-hosts/archive/master.zip
+
+trap "rm -rf $tmpdir" EXIT
+
+if test "$1" = --help; then
+    showhelp
+    exit
+elif test "$1" = -g; then
+    global=1
+    shift
+fi
+
+if test $# -gt 1; then
+    echo "unexpected argument" >&2
+    exit 2
+fi
+
+wget -qO- $pkg | busybox unzip -qd $tmpdir -
+tmpdir=$tmpdir/known-hosts-master
+
+if test $# -eq 0; then
+    if test "$global"; then
+        set -- --domain
+    else
+        set -- --public
+    fi
+fi
+
+if test "$1" = --domain; then
+    set -- $(hostname -d)
+
+    if ! test "$1"; then
+        echo "could not determine local domain" >&2
+        exit 10
+    fi
+fi
+
+if ! test "$global"; then
+    if test -e ~/.ssh/known_hosts; then
+        echo copying ~/.ssh/known_hosts to ~/.ssh/known_hosts.old
+        cp ~/.ssh/known_hosts ~/.ssh/known_hosts.old
+    else
+        if ! test -e ~/.ssh; then
+            mkdir -p ~/.ssh; chmod 700 ~/.ssh
+        fi
+
+        touch ~/.ssh/known_hosts; chmod 664 ~/.ssh/known_hosts
+    fi
+
+    file=~/.ssh/known_hosts
+else
+    file=/etc/ssh/ssh_known_hosts
+fi
+
+if grep -q :managed:$ $file; then
+    echo purging old host keys from $file
+    sed -f $tmpdir/purge.sed -i $file
+fi
+
+if test "$1" = --public; then
+    sed -f $tmpdir/public.sed $tmpdir/known_hosts >> $file
+else
+    sed -f $tmpdir/private.sed <(grep ^\\S\\+"${1//./\\.}\\s" < $tmpdir/known_hosts) >> $file
+fi
+
+echo imported host keys into $file
