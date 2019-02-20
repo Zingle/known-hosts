@@ -9,7 +9,7 @@ Fetch host key with: `ssh-keyscan -t ecdsa <host> 2>/dev/null`
 ### Importing
 
 ```sh
-# import public host keys for the current user only
+# import public host keys for the current user only (this is probably what you want)
 wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | bash
 wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | bash -s -- --public
 
