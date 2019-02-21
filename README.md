@@ -11,21 +11,48 @@ Fetch host key with: `ssh-keyscan -t ecdsa <host> 2>/dev/null`
 ```sh
 # import public host keys for the current user only (this is probably what you want)
 wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | bash
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | bash -s -- --public
+```
 
-# import host keys for local domain for the current user only
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | bash -s -- --domain
+You can pass additional arguments to the `import` by appending `-s -- <arg> ...`
+to `bash`.
 
-# import host keys for .zingle domain for the current user only
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | bash -s zingle
+```
+Usage:
+  import [-g]
+  import [-g] {--public|--domain|<domain>}
+  import --help
 
-# import host keys for local domain for all users
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | sudo bash -s -- -g
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | sudo bash -s -- -g --domain
+Import host keys into local system.
 
-# import public host keys for all users
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | sudo bash -s -- -g --public
+OPTIONS
+  --help    Show this help.
+  -g        Import host keys for all users (global).
+  --public  Import public hosts (default unless -g specified).
+  --domain  Import hosts for local domain (default if -g specified).
+  <domain>  Import specified domain (e.g., 'zingle.local').
+```
 
-# import host keys for .zingle domain for all users
-wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/import | sudo bash -s -- -g zingle
+### IP Address Pinning
+
+The `import` command will not add the host IP address to the known hosts.  This
+is because the IP addresses are generally considered transient.  To avoid any
+incidental key conflicts due to IP address recycling, you can add the following
+to your `~/.ssh/config`:
+
+```
+Host *.zingle.me
+    CheckHostIP no
+```
+
+This will be suitable for most use cases.  The one case where it is necessary
+to have IP address pinning is when needing to connect over SSH to an IP address.
+This happens with DNS pools, which do not always resolve to the same host.  To
+pin IP addresses for all imported host keys, run the following:
+
+```sh
+# for current user host keys
+wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/ippin | bash
+
+# for global host keys
+wget -qO- https://raw.githubusercontent.com/Zingle/known-hosts/master/ippin | sudo bash -s -- -g
 ```

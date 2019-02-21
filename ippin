@@ -1,0 +1,59 @@
+#!/bin/bash -e
+
+showhelp () {
+    echo "Usage:"
+    echo "  ippin [-g]"
+    echo "  ippin --help"
+    echo
+    echo "Attempt to pin host keys to resolved IP addresses."
+    echo
+    echo "OPTIONS"
+    echo
+    echo "  --help      Show this help."
+    echo "  -g          Pin global keys."
+}
+
+declare file=~/.ssh/known_hosts
+declare hosts host ip
+declare tmpdir=$(mktemp -d)
+
+trap "rm -rf $tmpdir" EXIT
+
+if test "$1" = --help; then
+    showhelp
+    exit
+elif test "$1" = -g; then
+    file=/etc/ssh/ssh_known_hosts
+    shift
+fi
+
+if test $# -gt 0; then
+    echo "unexpected argument" >&2
+    exit 2
+fi
+
+touch $tmpdir/hosts
+
+if ! test -e $file; then
+    exit
+fi
+
+grep :managed:$ $file | while read line; do
+    # pass on any entries that already have a pinned IP address
+    if grep -q ^\\S\\+,[0-9.]\\s <<< "$line"; then
+        echo "$line" >> $tmpdir/hosts
+    else
+        hosts=$(awk '{print $1}' <<< "$line")
+        for host in ${hosts//,/ }; do
+            ip=$(dig +short $host | head -n1)
+            if test "$ip" && ! grep -q \\b${ip//./\\.}\\b <<< "$hosts"; then
+                hosts=$hosts,$ip
+            fi
+        done
+        (echo -n $hosts; sed -e s/^\\S\\+// <<< "$line") >> $tmpdir/hosts
+    fi
+done
+
+grep -v :managed:$ $file || true > $tmpdir/known_hosts
+cat $tmpdir/hosts >> $tmpdir/known_hosts
+cp $tmpdir/known_hosts $file
