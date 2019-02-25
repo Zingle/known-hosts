@@ -54,6 +54,6 @@ grep :managed:$ $file | while read line; do
     fi
 done
 
-grep -v :managed:$ $file || true > $tmpdir/known_hosts
+grep -v :managed:$ $file > $tmpdir/known_hosts || true
 cat $tmpdir/hosts >> $tmpdir/known_hosts
 cp $tmpdir/known_hosts $file
