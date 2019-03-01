@@ -21,7 +21,7 @@ declare global=
 declare domain=
 declare file=
 declare tmpdir=$(mktemp -d)
-declare pkg=https://github.com/Zingle/known-hosts/archive/master.zip
+declare pkg=https://github.com/Zingle/known-hosts/tarball/master
 
 trap "rm -rf $tmpdir" EXIT
 
@@ -38,9 +38,9 @@ if test $# -gt 1; then
     exit 2
 fi
 
-wget -qO- $pkg > $tmpdir/known-hosts-master.zip
-unzip -qd $tmpdir $tmpdir/known-hosts-master.zip
-tmpdir=$tmpdir/known-hosts-master
+wget -qO- $pkg > $tmpdir/pkg.tgz
+(cd $tmpdir; tar xf pkg.tgz)
+tmpdir=$tmpdir/Zingle-known-hosts-*
 
 if test $# -eq 0; then
     if test "$global"; then
