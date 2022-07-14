@@ -17,6 +17,13 @@ showhelp () {
     echo "  <domain>    Specify domain (e.g., 'zingle.local')."
 }
 
+if ! sed --help &>/dev/null; then
+    echo sed command is missing, outdated, or unsupported >&2
+    echo key import requires recent GNU sed >&2
+    echo did nothing >&2
+    exit 100
+fi
+
 declare global=
 declare domain=
 declare file=
